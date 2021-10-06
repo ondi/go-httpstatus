@@ -32,7 +32,7 @@ type Data_t struct {
 	Sum   time.Duration
 }
 
-type HttpStatus_t struct {
+type Status_t struct {
 	hosts []string
 
 	got_conn time.Time //  GetConn() -> DNS{Start,Done}() + Connect{Start,Done}() -> TLSHandshake{Start,Done}()-> GotConn()
@@ -50,21 +50,21 @@ type HttpStatus_t struct {
 	code int
 }
 
-func (self *HttpStatus_t) Read(resp *http.Response) {
+func (self *Status_t) Read(resp *http.Response) {
 	self.code = resp.StatusCode
 	self.body.ReadFrom(io.LimitReader(resp.Body, 1024))
 }
 
-func (self *HttpStatus_t) WriteString(code int, in string) {
+func (self *Status_t) WriteString(code int, in string) {
 	self.code = code
 	self.body.WriteString(in)
 }
 
-func (self *HttpStatus_t) Code() int {
+func (self *Status_t) Code() int {
 	return self.code
 }
 
-func (self *HttpStatus_t) String() (res string) {
+func (self *Status_t) String() (res string) {
 	res = strconv.FormatInt(int64(self.code), 10)
 	if self.body.Len() > 0 {
 		res += " " + self.body.String()
@@ -72,7 +72,7 @@ func (self *HttpStatus_t) String() (res string) {
 	return
 }
 
-func (self *HttpStatus_t) WithClientTrace(ctx context.Context) context.Context {
+func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 	trace := httptrace.ClientTrace{
 		GetConn:              self.GetConn,
 		GotConn:              self.GotConn,
@@ -94,15 +94,15 @@ func (self *HttpStatus_t) WithClientTrace(ctx context.Context) context.Context {
 	return httptrace.WithClientTrace(ctx, &trace)
 }
 
-func (self *HttpStatus_t) GetTotal() time.Duration {
+func (self *Status_t) GetTotal() time.Duration {
 	return self.get_conn.Sum + self.request.Sum + self.response.Sum
 }
 
-func (self *HttpStatus_t) GetConnTotal() time.Duration {
+func (self *Status_t) GetConnTotal() time.Duration {
 	return self.get_conn.Sum
 }
 
-func (self *HttpStatus_t) Report() string {
+func (self *Status_t) Report() string {
 	return fmt.Sprintf(`Hosts: %v
 GetConn: %v %v
   Dns: %v %v
@@ -128,7 +128,7 @@ Error: %v`,
 // retrieved from an idle pool. The hostPort is the
 // "host:port" of the target or proxy. GetConn is called even
 // if there's already an idle cached connection available.
-func (self *HttpStatus_t) GetConn(hostPort string) {
+func (self *Status_t) GetConn(hostPort string) {
 	self.get_conn.Count++
 	self.get_conn.Begin = time.Now()
 	self.hosts = append(self.hosts, hostPort)
@@ -138,7 +138,7 @@ func (self *HttpStatus_t) GetConn(hostPort string) {
 // obtained. There is no hook for failure to obtain a
 // connection; instead, use the error from
 // Transport.RoundTrip.
-func (self *HttpStatus_t) GotConn(in httptrace.GotConnInfo) {
+func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
 	self.got_conn = time.Now()
 	self.get_conn.Sum += self.got_conn.Sub(self.get_conn.Begin)
 }
@@ -151,7 +151,7 @@ func (self *HttpStatus_t) GotConn(in httptrace.GotConnInfo) {
 // PutIdleConn is called before the caller's Response.Body.Close
 // call returns.
 // For HTTP/2, this hook is not currently used.
-func (self *HttpStatus_t) PutIdleConn(err error) {
+func (self *Status_t) PutIdleConn(err error) {
 	if err != nil {
 		self.err = err
 	}
@@ -159,7 +159,7 @@ func (self *HttpStatus_t) PutIdleConn(err error) {
 
 // GotFirstResponseByte is called when the first byte of the response
 // headers is available.
-func (self *HttpStatus_t) GotFirstResponseByte() {
+func (self *Status_t) GotFirstResponseByte() {
 	self.response.Count++
 	self.response.Begin = time.Now()
 	self.response.Sum += self.response.Begin.Sub(self.request.Begin)
@@ -167,7 +167,7 @@ func (self *HttpStatus_t) GotFirstResponseByte() {
 
 // Got100Continue is called if the server replies with a "100
 // Continue" response.
-func (self *HttpStatus_t) Got100Continue() {
+func (self *Status_t) Got100Continue() {
 
 }
 
@@ -175,18 +175,18 @@ func (self *HttpStatus_t) Got100Continue() {
 // returned before the final non-1xx response. Got1xxResponse is called
 // for "100 Continue" responses, even if Got100Continue is also defined.
 // If it returns an error, the client request is aborted with that error value.
-func (self *HttpStatus_t) Got1xxResponse(code int, header textproto.MIMEHeader) (err error) {
+func (self *Status_t) Got1xxResponse(code int, header textproto.MIMEHeader) (err error) {
 	return
 }
 
 // DNSStart is called when a DNS lookup begins.
-func (self *HttpStatus_t) DNSStart(in httptrace.DNSStartInfo) {
+func (self *Status_t) DNSStart(in httptrace.DNSStartInfo) {
 	self.dns_start.Count++
 	self.dns_start.Begin = time.Now()
 }
 
 // DNSDone is called when a DNS lookup ends.
-func (self *HttpStatus_t) DNSDone(in httptrace.DNSDoneInfo) {
+func (self *Status_t) DNSDone(in httptrace.DNSDoneInfo) {
 	self.dns_start.Sum += time.Since(self.dns_start.Begin)
 	if in.Err != nil {
 		self.err = in.Err
@@ -196,7 +196,7 @@ func (self *HttpStatus_t) DNSDone(in httptrace.DNSDoneInfo) {
 // ConnectStart is called when a new connection's Dial begins.
 // If net.Dialer.DualStack (IPv6 "Happy Eyeballs") support is
 // enabled, this may be called multiple times.
-func (self *HttpStatus_t) ConnectStart(network, addr string) {
+func (self *Status_t) ConnectStart(network, addr string) {
 	self.connect_start.Count++
 	self.connect_start.Begin = time.Now()
 }
@@ -206,7 +206,7 @@ func (self *HttpStatus_t) ConnectStart(network, addr string) {
 // connection completed successfully.
 // If net.Dialer.DualStack ("Happy Eyeballs") support is
 // enabled, this may be called multiple times.
-func (self *HttpStatus_t) ConnectDone(network, addr string, err error) {
+func (self *Status_t) ConnectDone(network, addr string, err error) {
 	self.connect_start.Sum += time.Since(self.connect_start.Begin)
 	if err != nil {
 		self.err = err
@@ -216,7 +216,7 @@ func (self *HttpStatus_t) ConnectDone(network, addr string, err error) {
 // TLSHandshakeStart is called when the TLS handshake is started. When
 // connecting to an HTTPS site via an HTTP proxy, the handshake happens
 // after the CONNECT request is processed by the proxy.
-func (self *HttpStatus_t) TLSHandshakeStart() {
+func (self *Status_t) TLSHandshakeStart() {
 	self.tls_start.Count++
 	self.tls_start.Begin = time.Now()
 }
@@ -224,7 +224,7 @@ func (self *HttpStatus_t) TLSHandshakeStart() {
 // TLSHandshakeDone is called after the TLS handshake with either the
 // successful handshake's connection state, or a non-nil error on handshake
 // failure.
-func (self *HttpStatus_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
+func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
 	self.tls_start.Sum += time.Since(self.tls_start.Begin)
 	if err != nil {
 		self.err = err
@@ -234,13 +234,13 @@ func (self *HttpStatus_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
 // WroteHeaderField is called after the Transport has written
 // each request header. At the time of this call the values
 // might be buffered and not yet written to the network.
-func (self *HttpStatus_t) WroteHeaderField(key string, value []string) {
+func (self *Status_t) WroteHeaderField(key string, value []string) {
 
 }
 
 // WroteHeaders is called after the Transport has written
 // all request headers.
-func (self *HttpStatus_t) WroteHeaders() {
+func (self *Status_t) WroteHeaders() {
 
 }
 
@@ -248,14 +248,14 @@ func (self *HttpStatus_t) WroteHeaders() {
 // "Expect: 100-continue" and the Transport has written the
 // request headers but is waiting for "100 Continue" from the
 // server before writing the request body.
-func (self *HttpStatus_t) Wait100Continue() {
+func (self *Status_t) Wait100Continue() {
 
 }
 
 // WroteRequest is called with the result of writing the
 // request and any body. It may be called multiple times
 // in the case of retried requests.
-func (self *HttpStatus_t) WroteRequest(in httptrace.WroteRequestInfo) {
+func (self *Status_t) WroteRequest(in httptrace.WroteRequestInfo) {
 	self.request.Count++
 	self.request.Begin = time.Now()
 	self.request.Sum += self.request.Begin.Sub(self.got_conn)

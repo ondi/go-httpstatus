@@ -13,7 +13,7 @@ import (
 )
 
 func Test_Status01(t *testing.T) {
-	var status HttpStatus_t
+	var status Status_t
 	ctx := status.WithClientTrace(context.Background())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://google.ru", nil)

@@ -72,6 +72,10 @@ func (self *Status_t) String() (res string) {
 	return
 }
 
+func (self *Status_t) Bytes() []byte {
+	return self.body.Bytes()
+}
+
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 	trace := httptrace.ClientTrace{
 		GetConn:              self.GetConn,

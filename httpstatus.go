@@ -51,8 +51,16 @@ type Status_t struct {
 }
 
 func (self *Status_t) Read(resp *http.Response) {
-	self.code = resp.StatusCode
-	self.body.ReadFrom(io.LimitReader(resp.Body, 1024))
+	self.SetCode(resp.StatusCode)
+	self.ReadFrom(resp.Body)
+}
+
+func (self *Status_t) SetCode(in int) {
+	self.code = in
+}
+
+func (self *Status_t) ReadFrom(in io.Reader) (int64, error) {
+	return self.body.ReadFrom(io.LimitReader(in, 1024))
 }
 
 func (self *Status_t) WriteString(code int, in string) {

@@ -55,13 +55,17 @@ func (self *Status_t) Read(resp *http.Response) {
 	self.ReadFrom(resp.Body)
 }
 
-func (self *Status_t) WriteString(code int, in string) {
+func (self *Status_t) WriteStatus(code int, in string) {
 	self.SetCode(code)
-	self.body.WriteString(in)
+	self.WriteString(in)
 }
 
 func (self *Status_t) SetCode(in int) {
 	self.code = in
+}
+
+func (self *Status_t) WriteString(in string) {
+	self.body.WriteString(in)
 }
 
 func (self *Status_t) ReadFrom(in io.Reader) (int64, error) {

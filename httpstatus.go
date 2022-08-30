@@ -55,6 +55,11 @@ func (self *Status_t) Read(resp *http.Response) {
 	self.ReadFrom(resp.Body)
 }
 
+func (self *Status_t) ReadLimit(resp *http.Response, limit int64) {
+	self.SetCode(resp.StatusCode)
+	self.ReadFromLimit(resp.Body, limit)
+}
+
 func (self *Status_t) WriteStatus(code int, in string) {
 	self.SetCode(code)
 	self.WriteString(in)
@@ -69,7 +74,11 @@ func (self *Status_t) WriteString(in string) {
 }
 
 func (self *Status_t) ReadFrom(in io.Reader) (int64, error) {
-	return self.body.ReadFrom(io.LimitReader(in, 1024))
+	return self.body.ReadFrom(in)
+}
+
+func (self *Status_t) ReadFromLimit(in io.Reader, limit int64) (int64, error) {
+	return self.body.ReadFrom(io.LimitReader(in, limit))
 }
 
 func (self *Status_t) Code() int {

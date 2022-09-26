@@ -65,8 +65,8 @@ func (self *Status_t) WriteStatus(code int, in string) {
 	self.WriteString(in)
 }
 
-func (self *Status_t) WriteStatusLe(set_if_le int, code int, in string) {
-	if self.code <= set_if_le {
+func (self *Status_t) WriteStatusLess(code_less int, code int, in string) {
+	if self.code < code_less {
 		self.SetCode(code)
 	}
 	self.WriteString(in)

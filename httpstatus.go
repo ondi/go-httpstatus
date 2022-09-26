@@ -65,6 +65,13 @@ func (self *Status_t) WriteStatus(code int, in string) {
 	self.WriteString(in)
 }
 
+func (self *Status_t) WriteStatusLe(set_if_le int, code int, in string) {
+	if self.code <= set_if_le {
+		self.SetCode(code)
+	}
+	self.WriteString(in)
+}
+
 func (self *Status_t) SetCode(in int) {
 	self.code = in
 }

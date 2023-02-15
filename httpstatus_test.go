@@ -7,6 +7,7 @@ package httpstatus
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -23,8 +24,10 @@ func Test_Status01(t *testing.T) {
 	assert.NilError(t, err)
 
 	assert.Assert(t, resp != nil)
-	assert.Assert(t, status.GetConnTotal() != 0)
 	assert.Assert(t, status.GetTotal() != 0)
 
-	t.Log(status.Report())
+	t.Logf("%+v\n", status.GetTotal())
+	var sb strings.Builder
+	status.Report(&sb)
+	t.Logf("%s\n", sb.String())
 }

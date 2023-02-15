@@ -1,12 +1,11 @@
 //
 // GetConn()
-// DNSStart()
-// DNSDone()
 // ConnectStart()
+// DNS{Start,Done}()
+// TLSHandshake{Start,Done}()
 // ConnectDone()
-// TLSHandshakeStart()
-// TLSHandshakeDone()
 // GotConn()
+// WroteHeaders()
 // WroteRequest()
 // GotFirstResponseByte()
 //
@@ -23,28 +22,33 @@ import (
 	"net/http/httptrace"
 	"net/textproto"
 	"strconv"
+	"strings"
 	"time"
 )
 
-type Data_t struct {
+type Begin_t struct {
 	Begin time.Time
 	Count int
-	Sum   time.Duration
+}
+
+type End_t struct {
+	End   time.Time
+	Count int
 }
 
 type Status_t struct {
-	hosts []string
-
-	got_conn time.Time //  GetConn() -> DNS{Start,Done}() + Connect{Start,Done}() -> TLSHandshake{Start,Done}()-> GotConn()
-
-	get_conn      Data_t
-	dns_start     Data_t
-	connect_start Data_t
-	tls_start     Data_t
-	request       Data_t
-	response      Data_t
-
-	err error
+	Hosts         []string
+	XGetConn      Begin_t
+	XConnectStart Begin_t
+	XDnsStart     Begin_t
+	XDnsDone      End_t
+	XTlsStart     Begin_t
+	XTlsDone      End_t
+	XConnectDone  End_t
+	XGotConn      End_t
+	XRequest      End_t
+	XResponse     End_t
+	Err           error
 
 	body bytes.Buffer
 	code int
@@ -105,54 +109,55 @@ func (self *Status_t) Bytes() []byte {
 }
 
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
-	trace := httptrace.ClientTrace{
-		GetConn:              self.GetConn,
-		GotConn:              self.GotConn,
-		PutIdleConn:          self.PutIdleConn,
-		GotFirstResponseByte: self.GotFirstResponseByte,
-		Got100Continue:       self.Got100Continue,
-		Got1xxResponse:       self.Got1xxResponse,
-		DNSStart:             self.DNSStart,
-		DNSDone:              self.DNSDone,
-		ConnectStart:         self.ConnectStart,
-		ConnectDone:          self.ConnectDone,
-		TLSHandshakeStart:    self.TLSHandshakeStart,
-		TLSHandshakeDone:     self.TLSHandshakeDone,
-		WroteHeaderField:     self.WroteHeaderField,
-		WroteHeaders:         self.WroteHeaders,
-		Wait100Continue:      self.Wait100Continue,
-		WroteRequest:         self.WroteRequest,
-	}
-	return httptrace.WithClientTrace(ctx, &trace)
+	return httptrace.WithClientTrace(ctx,
+		&httptrace.ClientTrace{
+			GetConn:              self.GetConn,
+			GotConn:              self.GotConn,
+			PutIdleConn:          self.PutIdleConn,
+			GotFirstResponseByte: self.GotFirstResponseByte,
+			Got100Continue:       self.Got100Continue,
+			Got1xxResponse:       self.Got1xxResponse,
+			DNSStart:             self.DNSStart,
+			DNSDone:              self.DNSDone,
+			ConnectStart:         self.ConnectStart,
+			ConnectDone:          self.ConnectDone,
+			TLSHandshakeStart:    self.TLSHandshakeStart,
+			TLSHandshakeDone:     self.TLSHandshakeDone,
+			WroteHeaderField:     self.WroteHeaderField,
+			WroteHeaders:         self.WroteHeaders,
+			Wait100Continue:      self.Wait100Continue,
+			WroteRequest:         self.WroteRequest,
+		},
+	)
 }
 
 func (self *Status_t) GetTotal() time.Duration {
-	return self.get_conn.Sum + self.request.Sum + self.response.Sum
+	return self.XResponse.End.Sub(self.XGetConn.Begin)
 }
 
-func (self *Status_t) GetConnTotal() time.Duration {
-	return self.get_conn.Sum
-}
-
-func (self *Status_t) Report() string {
-	return fmt.Sprintf(`Hosts: %v
-GetConn: %v %v
-  Dns: %v %v
-  Connect: %v %v
-  Tls: %v %v
-Request: %v %v
-Response: %v %v
-Total: %v
-Error: %v`,
-		self.hosts,
-		self.get_conn.Count, self.get_conn.Sum,
-		self.dns_start.Count, self.dns_start.Sum,
-		self.connect_start.Count, self.connect_start.Sum,
-		self.tls_start.Count, self.tls_start.Sum,
-		self.request.Count, self.request.Sum,
-		self.response.Count, self.response.Sum,
-		self.GetTotal(),
-		self.err,
+func (self *Status_t) Report(out *strings.Builder) {
+	fmt.Fprintf(out, `
+XGetConn     : %v %v
+XConnectStart: %v %v
+XDnsStart    : %v %v
+XDnsDone     : %v %v
+XTlsStart    : %v %v
+XTlsDone     : %v %v
+XConnectDone : %v %v
+XGotConn     : %v %v
+XRequest     : %v %v
+XResponse    : %v %v
+`,
+		self.XGetConn.Count, self.XGetConn.Begin.Format("2006-01-02 15:04:05.000000"),
+		self.XConnectStart.Count, self.XConnectStart.Begin.Format("2006-01-02 15:04:05.000000"),
+		self.XDnsStart.Count, self.XDnsStart.Begin.Format("2006-01-02 15:04:05.000000"),
+		self.XDnsDone.Count, self.XDnsDone.End.Format("2006-01-02 15:04:05.000000"),
+		self.XTlsStart.Count, self.XTlsStart.Begin.Format("2006-01-02 15:04:05.000000"),
+		self.XTlsDone.Count, self.XTlsDone.End.Format("2006-01-02 15:04:05.000000"),
+		self.XConnectDone.Count, self.XConnectDone.End.Format("2006-01-02 15:04:05.000000"),
+		self.XGotConn.Count, self.XGotConn.End.Format("2006-01-02 15:04:05.000000"),
+		self.XRequest.Count, self.XRequest.End.Format("2006-01-02 15:04:05.000000"),
+		self.XResponse.Count, self.XResponse.End.Format("2006-01-02 15:04:05.000000"),
 	)
 }
 
@@ -161,9 +166,10 @@ Error: %v`,
 // "host:port" of the target or proxy. GetConn is called even
 // if there's already an idle cached connection available.
 func (self *Status_t) GetConn(hostPort string) {
-	self.get_conn.Count++
-	self.get_conn.Begin = time.Now()
-	self.hosts = append(self.hosts, hostPort)
+	if self.XGetConn.Count++; self.XGetConn.Count == 1 {
+		self.XGetConn.Begin = time.Now()
+	}
+	self.Hosts = append(self.Hosts, hostPort)
 }
 
 // GotConn is called after a successful connection is
@@ -171,8 +177,8 @@ func (self *Status_t) GetConn(hostPort string) {
 // connection; instead, use the error from
 // Transport.RoundTrip.
 func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
-	self.got_conn = time.Now()
-	self.get_conn.Sum += self.got_conn.Sub(self.get_conn.Begin)
+	self.XGotConn.Count++
+	self.XGotConn.End = time.Now()
 }
 
 // PutIdleConn is called when the connection is returned to
@@ -185,16 +191,15 @@ func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
 // For HTTP/2, this hook is not currently used.
 func (self *Status_t) PutIdleConn(err error) {
 	if err != nil {
-		self.err = err
+		self.Err = err
 	}
 }
 
 // GotFirstResponseByte is called when the first byte of the response
 // headers is available.
 func (self *Status_t) GotFirstResponseByte() {
-	self.response.Count++
-	self.response.Begin = time.Now()
-	self.response.Sum += self.response.Begin.Sub(self.request.Begin)
+	self.XResponse.Count++
+	self.XResponse.End = time.Now()
 }
 
 // Got100Continue is called if the server replies with a "100
@@ -213,15 +218,17 @@ func (self *Status_t) Got1xxResponse(code int, header textproto.MIMEHeader) (err
 
 // DNSStart is called when a DNS lookup begins.
 func (self *Status_t) DNSStart(in httptrace.DNSStartInfo) {
-	self.dns_start.Count++
-	self.dns_start.Begin = time.Now()
+	if self.XDnsStart.Count++; self.XDnsStart.Count == 1 {
+		self.XDnsStart.Begin = time.Now()
+	}
 }
 
 // DNSDone is called when a DNS lookup ends.
 func (self *Status_t) DNSDone(in httptrace.DNSDoneInfo) {
-	self.dns_start.Sum += time.Since(self.dns_start.Begin)
+	self.XDnsDone.Count++
+	self.XDnsDone.End = time.Now()
 	if in.Err != nil {
-		self.err = in.Err
+		self.Err = in.Err
 	}
 }
 
@@ -229,8 +236,9 @@ func (self *Status_t) DNSDone(in httptrace.DNSDoneInfo) {
 // If net.Dialer.DualStack (IPv6 "Happy Eyeballs") support is
 // enabled, this may be called multiple times.
 func (self *Status_t) ConnectStart(network, addr string) {
-	self.connect_start.Count++
-	self.connect_start.Begin = time.Now()
+	if self.XConnectStart.Count++; self.XConnectStart.Count == 1 {
+		self.XConnectStart.Begin = time.Now()
+	}
 }
 
 // ConnectDone is called when a new connection's Dial
@@ -239,9 +247,10 @@ func (self *Status_t) ConnectStart(network, addr string) {
 // If net.Dialer.DualStack ("Happy Eyeballs") support is
 // enabled, this may be called multiple times.
 func (self *Status_t) ConnectDone(network, addr string, err error) {
-	self.connect_start.Sum += time.Since(self.connect_start.Begin)
+	self.XConnectDone.Count++
+	self.XConnectDone.End = time.Now()
 	if err != nil {
-		self.err = err
+		self.Err = err
 	}
 }
 
@@ -249,17 +258,19 @@ func (self *Status_t) ConnectDone(network, addr string, err error) {
 // connecting to an HTTPS site via an HTTP proxy, the handshake happens
 // after the CONNECT request is processed by the proxy.
 func (self *Status_t) TLSHandshakeStart() {
-	self.tls_start.Count++
-	self.tls_start.Begin = time.Now()
+	if self.XTlsStart.Count++; self.XTlsStart.Count == 1 {
+		self.XTlsStart.Begin = time.Now()
+	}
 }
 
 // TLSHandshakeDone is called after the TLS handshake with either the
 // successful handshake's connection state, or a non-nil error on handshake
 // failure.
 func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
-	self.tls_start.Sum += time.Since(self.tls_start.Begin)
+	self.XTlsDone.Count++
+	self.XTlsDone.End = time.Now()
 	if err != nil {
-		self.err = err
+		self.Err = err
 	}
 }
 
@@ -288,10 +299,9 @@ func (self *Status_t) Wait100Continue() {
 // request and any body. It may be called multiple times
 // in the case of retried requests.
 func (self *Status_t) WroteRequest(in httptrace.WroteRequestInfo) {
-	self.request.Count++
-	self.request.Begin = time.Now()
-	self.request.Sum += self.request.Begin.Sub(self.got_conn)
+	self.XRequest.Count++
+	self.XRequest.End = time.Now()
 	if in.Err != nil {
-		self.err = in.Err
+		self.Err = in.Err
 	}
 }

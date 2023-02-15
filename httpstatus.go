@@ -37,7 +37,6 @@ type End_t struct {
 }
 
 type Status_t struct {
-	Hosts         []string
 	XGetConn      Begin_t
 	XConnectStart Begin_t
 	XDnsStart     Begin_t
@@ -48,7 +47,9 @@ type Status_t struct {
 	XGotConn      End_t
 	XRequest      End_t
 	XResponse     End_t
-	Err           error
+
+	Hosts []string
+	Err   error
 
 	body bytes.Buffer
 	code int

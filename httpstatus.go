@@ -55,14 +55,12 @@ type Status_t struct {
 	code int
 }
 
-func (self *Status_t) Read(resp *http.Response) {
-	self.SetCode(resp.StatusCode)
-	self.ReadFrom(resp.Body)
+func (self *Status_t) SetCode(in int) {
+	self.code = in
 }
 
-func (self *Status_t) ReadLimit(resp *http.Response, limit int64) {
-	self.SetCode(resp.StatusCode)
-	self.ReadFromLimit(resp.Body, limit)
+func (self *Status_t) WriteString(in string) {
+	self.body.WriteString(in)
 }
 
 func (self *Status_t) WriteStatus(code int, in string) {
@@ -70,19 +68,22 @@ func (self *Status_t) WriteStatus(code int, in string) {
 	self.WriteString(in)
 }
 
-func (self *Status_t) WriteStatusLess(code_less int, code int, in string) {
-	if self.code < code_less {
-		self.SetCode(code)
+func (self *Status_t) Read(req *http.Request, resp *http.Response) {
+	if req != nil {
+		self.WriteString(req.URL.String())
+		self.WriteString(" ")
 	}
-	self.WriteString(in)
+	self.SetCode(resp.StatusCode)
+	self.ReadFrom(resp.Body)
 }
 
-func (self *Status_t) SetCode(in int) {
-	self.code = in
-}
-
-func (self *Status_t) WriteString(in string) {
-	self.body.WriteString(in)
+func (self *Status_t) ReadLimit(req *http.Request, resp *http.Response, limit int64) {
+	if req != nil {
+		self.WriteString(req.URL.String())
+		self.WriteString(" ")
+	}
+	self.SetCode(resp.StatusCode)
+	self.ReadFromLimit(resp.Body, limit)
 }
 
 func (self *Status_t) ReadFrom(in io.Reader) (int64, error) {

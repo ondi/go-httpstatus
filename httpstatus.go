@@ -63,8 +63,12 @@ func (self *Status_t) WriteString(in string) {
 	self.body.WriteString(in)
 }
 
-func (self *Status_t) WriteStatus(code int, in string) {
+func (self *Status_t) WriteStatus(req *http.Request, code int, in string) {
 	self.SetCode(code)
+	if req != nil {
+		self.WriteString(req.URL.String())
+		self.WriteString(" ")
+	}
 	self.WriteString(in)
 }
 

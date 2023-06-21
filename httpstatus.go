@@ -51,67 +51,47 @@ type Status_t struct {
 	Hosts []string
 	Err   error
 
-	body bytes.Buffer
-	code int
+	Body   bytes.Buffer
+	Status int
 }
 
-func (self *Status_t) SetCode(in int) {
-	self.code = in
-}
-
-func (self *Status_t) WriteString(in string) {
-	self.body.WriteString(in)
-}
-
-func (self *Status_t) WriteStatus(req *http.Request, code int, in string) {
-	self.SetCode(code)
+func (self *Status_t) WriteStatus(req *http.Request, status int, in string) {
 	if req != nil {
-		self.WriteString(req.URL.String())
-		self.WriteString(" ")
+		self.Body.WriteString(req.URL.String())
+		self.Body.WriteString(" ")
 	}
-	self.WriteString(in)
+	self.Status = status
+	self.Body.WriteString(in)
 }
 
 func (self *Status_t) Read(req *http.Request, resp *http.Response) {
 	if req != nil {
-		self.WriteString(req.URL.String())
-		self.WriteString(" ")
+		self.Body.WriteString(req.URL.String())
+		self.Body.WriteString(" ")
 	}
-	self.SetCode(resp.StatusCode)
-	self.ReadFrom(resp.Body)
+	self.Status = resp.StatusCode
+	self.Body.ReadFrom(resp.Body)
 }
 
 func (self *Status_t) ReadLimit(req *http.Request, resp *http.Response, limit int64) {
 	if req != nil {
-		self.WriteString(req.URL.String())
-		self.WriteString(" ")
+		self.Body.WriteString(req.URL.String())
+		self.Body.WriteString(" ")
 	}
-	self.SetCode(resp.StatusCode)
-	self.ReadFromLimit(resp.Body, limit)
-}
-
-func (self *Status_t) ReadFrom(in io.Reader) (int64, error) {
-	return self.body.ReadFrom(in)
-}
-
-func (self *Status_t) ReadFromLimit(in io.Reader, limit int64) (int64, error) {
-	return self.body.ReadFrom(io.LimitReader(in, limit))
+	self.Status = resp.StatusCode
+	self.Body.ReadFrom(io.LimitReader(resp.Body, limit))
 }
 
 func (self *Status_t) Code() int {
-	return self.code
+	return self.Status
 }
 
 func (self *Status_t) String() (res string) {
-	res = strconv.FormatInt(int64(self.code), 10)
-	if self.body.Len() > 0 {
-		res += " " + self.body.String()
+	res = strconv.FormatInt(int64(self.Status), 10)
+	if self.Body.Len() > 0 {
+		res += " " + self.Body.String()
 	}
 	return
-}
-
-func (self *Status_t) Bytes() []byte {
-	return self.body.Bytes()
 }
 
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {

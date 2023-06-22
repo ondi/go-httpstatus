@@ -55,35 +55,24 @@ type Status_t struct {
 	Status int
 }
 
-func (self *Status_t) WriteStatus(req *http.Request, status int, in string) {
-	if req != nil {
-		self.Body.WriteString(req.URL.String())
-		self.Body.WriteString(" ")
-	}
-	self.Status = status
-	self.Body.WriteString(in)
+func (self *Status_t) WriteReq(req *http.Request) {
+	self.Body.WriteString(req.URL.String())
+	self.Body.WriteString(" ")
 }
 
-func (self *Status_t) Read(req *http.Request, resp *http.Response) {
-	if req != nil {
-		self.Body.WriteString(req.URL.String())
-		self.Body.WriteString(" ")
-	}
+func (self *Status_t) WriteResp(resp *http.Response) {
 	self.Status = resp.StatusCode
 	self.Body.ReadFrom(resp.Body)
 }
 
-func (self *Status_t) ReadLimit(req *http.Request, resp *http.Response, limit int64) {
-	if req != nil {
-		self.Body.WriteString(req.URL.String())
-		self.Body.WriteString(" ")
-	}
+func (self *Status_t) WriteRespLimit(resp *http.Response, limit int64) {
 	self.Status = resp.StatusCode
 	self.Body.ReadFrom(io.LimitReader(resp.Body, limit))
 }
 
-func (self *Status_t) Code() int {
-	return self.Status
+func (self *Status_t) WriteStatus(status int, in string) {
+	self.Status = status
+	self.Body.WriteString(in)
 }
 
 func (self *Status_t) String() (res string) {

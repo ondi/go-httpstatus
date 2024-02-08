@@ -27,8 +27,6 @@ func Test_Status01(t *testing.T) {
 
 	cancel()
 
-	t.Logf("TOTAL=%v", status.GetTotal())
-
 	var sb strings.Builder
 	status.Report(&sb)
 	t.Logf("%s\n", sb.String())

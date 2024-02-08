@@ -75,7 +75,6 @@ func (self *Metrics_t) Get() (out []Count_t) {
 			out = append(out, *v)
 		}
 	}
-	sort.Slice(out, func(i int, j int) bool { return out[i].Head.Before(out[j].Head) })
 	return
 }
 
@@ -144,7 +143,7 @@ func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 }
 
 func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
-	fmt.Fprintf(out, "%15s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("2006-01-02 15:04:05.000000"), c.Tail.Format("2006-01-02 15:04:05.000000"), c.Tail.Sub(prev))
+	fmt.Fprintf(out, "%15s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
 	return c.Tail
 }
 
@@ -158,6 +157,7 @@ func (self *Status_t) Report(out io.Writer) {
 		fmt.Fprintf(out, "NO METRICS\n")
 		return
 	}
+	sort.Slice(res, func(i int, j int) bool { return res[i].Head.Before(res[j].Head) })
 	fmt.Fprintf(out, "HOSTS : %v\n", self.Hosts)
 	fmt.Fprintf(out, "ERRORS: %v\n", self.Errors)
 	fmt.Fprintf(out, "TOTAL : %v %v\n", time.Since(self.Begin), res[len(res)-1].Tail.Sub(res[0].Head))

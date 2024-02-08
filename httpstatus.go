@@ -143,7 +143,7 @@ func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 }
 
 func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
-	fmt.Fprintf(out, "%15s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
+	fmt.Fprintf(out, "%-12s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
 	return c.Tail
 }
 

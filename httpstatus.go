@@ -149,6 +149,10 @@ func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
 }
 
 func (self *Status_t) Report(out io.Writer) {
+	if self.Metrics == nil {
+		fmt.Fprintf(out, "NO REPORT\n")
+		return
+	}
 	res := self.Metrics.Get()
 	if len(res) == 0 {
 		fmt.Fprintf(out, "NO METRICS\n")

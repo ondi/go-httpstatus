@@ -143,7 +143,7 @@ func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 }
 
 func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
-	fmt.Fprintf(out, "%-12s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
+	fmt.Fprintf(out, "%-16s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
 	return c.Tail
 }
 
@@ -192,6 +192,7 @@ func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
 // call returns.
 // For HTTP/2, this hook is not currently used.
 func (self *Status_t) PutIdleConn(err error) {
+	// self.Metrics.Set("PutIdleConn", time.Now())
 	if err != nil {
 		self.Errors = append(self.Errors, err)
 	}
@@ -206,7 +207,7 @@ func (self *Status_t) GotFirstResponseByte() {
 // Got100Continue is called if the server replies with a "100
 // Continue" response.
 func (self *Status_t) Got100Continue() {
-
+	self.Metrics.Set("100Continue", time.Now())
 }
 
 // Got1xxResponse is called for each 1xx informational response header
@@ -214,6 +215,7 @@ func (self *Status_t) Got100Continue() {
 // for "100 Continue" responses, even if Got100Continue is also defined.
 // If it returns an error, the client request is aborted with that error value.
 func (self *Status_t) Got1xxResponse(code int, header textproto.MIMEHeader) (err error) {
+	self.Metrics.Set("1xxResponse", time.Now())
 	return
 }
 
@@ -253,14 +255,14 @@ func (self *Status_t) ConnectDone(network, addr string, err error) {
 // connecting to an HTTPS site via an HTTP proxy, the handshake happens
 // after the CONNECT request is processed by the proxy.
 func (self *Status_t) TLSHandshakeStart() {
-	self.Metrics.Set("TLSHandshakeStart", time.Now())
+	self.Metrics.Set("TLSStart", time.Now())
 }
 
 // TLSHandshakeDone is called after the TLS handshake with either the
 // successful handshake's connection state, or a non-nil error on handshake
 // failure.
 func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
-	self.Metrics.Set("TLSHandshakeDone", time.Now())
+	self.Metrics.Set("TLSDone", time.Now())
 	if err != nil {
 		self.Errors = append(self.Errors, err)
 	}
@@ -270,13 +272,13 @@ func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
 // each request header. At the time of this call the values
 // might be buffered and not yet written to the network.
 func (self *Status_t) WroteHeaderField(key string, value []string) {
-
+	self.Metrics.Set("WroteHeaderField", time.Now())
 }
 
 // WroteHeaders is called after the Transport has written
 // all request headers.
 func (self *Status_t) WroteHeaders() {
-
+	self.Metrics.Set("WroteHeaders", time.Now())
 }
 
 // Wait100Continue is called if the Request specified
@@ -284,7 +286,7 @@ func (self *Status_t) WroteHeaders() {
 // request headers but is waiting for "100 Continue" from the
 // server before writing the request body.
 func (self *Status_t) Wait100Continue() {
-
+	self.Metrics.Set("Wait100Continue", time.Now())
 }
 
 // WroteRequest is called with the result of writing the

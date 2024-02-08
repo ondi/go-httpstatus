@@ -25,6 +25,7 @@ import (
 	"net/textproto"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -43,21 +44,35 @@ func (self *Count_t) Set(name string, dt time.Time) {
 	self.Tail = dt
 }
 
-type Metrics_t map[string]*Count_t
+type Metrics_t struct {
+	mx   sync.Mutex
+	data map[string]*Count_t
+}
 
-func (self Metrics_t) Set(name string, dt time.Time) (c *Count_t) {
-	if c = self[name]; c == nil {
+func NewMetrics() *Metrics_t {
+	return &Metrics_t{
+		data: map[string]*Count_t{},
+	}
+}
+
+func (self *Metrics_t) Set(name string, dt time.Time) {
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	c := self.data[name]
+	if c == nil {
 		c = &Count_t{}
-		self[name] = c
+		self.data[name] = c
 	}
 	c.Set(name, dt)
 	return
 }
 
-func (self Metrics_t) Get() (out []*Count_t) {
-	for _, v := range self {
+func (self *Metrics_t) Get() (out []Count_t) {
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	for _, v := range self.data {
 		if v.Count > 0 {
-			out = append(out, v)
+			out = append(out, *v)
 		}
 	}
 	sort.Slice(out, func(i int, j int) bool { return out[i].Head.Before(out[j].Head) })
@@ -66,7 +81,7 @@ func (self Metrics_t) Get() (out []*Count_t) {
 
 type Status_t struct {
 	Begin   time.Time
-	Metrics Metrics_t
+	Metrics *Metrics_t
 
 	Hosts  []string
 	Errors []error
@@ -105,7 +120,7 @@ func (self *Status_t) String() (res string) {
 
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 	self.Begin = time.Now()
-	self.Metrics = Metrics_t{}
+	self.Metrics = NewMetrics()
 	return httptrace.WithClientTrace(ctx,
 		&httptrace.ClientTrace{
 			GetConn:              self.GetConn,
@@ -128,7 +143,7 @@ func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
 	)
 }
 
-func ReportMetric(out io.Writer, c *Count_t, prev time.Time) time.Time {
+func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
 	fmt.Fprintf(out, "%15s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("2006-01-02 15:04:05.000000"), c.Tail.Format("2006-01-02 15:04:05.000000"), c.Tail.Sub(prev))
 	return c.Tail
 }

@@ -65,6 +65,7 @@ func (self Metrics_t) Get() (out []*Count_t) {
 }
 
 type Status_t struct {
+	Begin   time.Time
 	Metrics Metrics_t
 
 	Hosts  []string
@@ -103,6 +104,7 @@ func (self *Status_t) String() (res string) {
 }
 
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
+	self.Begin = time.Now()
 	self.Metrics = Metrics_t{}
 	return httptrace.WithClientTrace(ctx,
 		&httptrace.ClientTrace{
@@ -132,14 +134,14 @@ func ReportMetric(out io.Writer, c *Count_t, prev time.Time) time.Time {
 }
 
 func (self *Status_t) Report(out io.Writer) {
-	fmt.Fprintf(out, "HOSTS : %v\n", self.Hosts)
-	fmt.Fprintf(out, "ERRORS: %v\n", self.Errors)
-
 	res := self.Metrics.Get()
 	if len(res) == 0 {
 		fmt.Fprintf(out, "NO METRICS\n")
 		return
 	}
+	fmt.Fprintf(out, "HOSTS : %v\n", self.Hosts)
+	fmt.Fprintf(out, "ERRORS: %v\n", self.Errors)
+	fmt.Fprintf(out, "TOTAL : %v %v\n", time.Since(self.Begin), res[len(res)-1].Tail.Sub(res[0].Head))
 	for _, v := range res {
 		ReportMetric(out, v, res[0].Head)
 	}

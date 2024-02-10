@@ -44,43 +44,19 @@ func (self *Count_t) Set(name string, dt time.Time) {
 	self.Tail = dt
 }
 
-type Metrics_t struct {
-	mx     sync.Mutex
-	data   map[string]*Count_t
-	errors []error
-}
+type Metrics_t map[string]*Count_t
 
-func NewMetrics() *Metrics_t {
-	return &Metrics_t{
-		data: map[string]*Count_t{},
-	}
-}
-
-func (self *Metrics_t) Set(name string, dt time.Time) {
-	self.mx.Lock()
-	defer self.mx.Unlock()
-	c := self.data[name]
+func (self Metrics_t) Set(name string, dt time.Time) {
+	c := self[name]
 	if c == nil {
 		c = &Count_t{}
-		self.data[name] = c
+		self[name] = c
 	}
 	c.Set(name, dt)
-	return
 }
 
-func (self *Metrics_t) SetError(name string, err error) {
-	self.mx.Lock()
-	defer self.mx.Unlock()
-	if len(self.errors) < 10 {
-		self.errors = append(self.errors, err)
-	}
-	return
-}
-
-func (self *Metrics_t) Get() (out []Count_t) {
-	self.mx.Lock()
-	defer self.mx.Unlock()
-	for _, v := range self.data {
+func (self Metrics_t) Get() (out []Count_t) {
+	for _, v := range self {
 		if v.Count > 0 {
 			out = append(out, *v)
 		}
@@ -88,18 +64,12 @@ func (self *Metrics_t) Get() (out []Count_t) {
 	return
 }
 
-func (self *Metrics_t) GetErrors() (out []error) {
-	self.mx.Lock()
-	defer self.mx.Unlock()
-	for _, v := range self.errors {
-		out = append(out, v)
-	}
-	return
-}
-
 type Status_t struct {
-	Begin   time.Time
-	Metrics *Metrics_t
+	mx      sync.Mutex
+	begin   time.Time
+	metrics Metrics_t
+	hosts   []string
+	errors  []error
 
 	Body   bytes.Buffer
 	Status int
@@ -134,8 +104,8 @@ func (self *Status_t) String() (res string) {
 }
 
 func (self *Status_t) WithClientTrace(ctx context.Context) context.Context {
-	self.Begin = time.Now()
-	self.Metrics = NewMetrics()
+	self.begin = time.Now()
+	self.metrics = Metrics_t{}
 	return httptrace.WithClientTrace(ctx,
 		&httptrace.ClientTrace{
 			GetConn:              self.GetConn,
@@ -164,18 +134,17 @@ func ReportMetric(out io.Writer, c Count_t, prev time.Time) time.Time {
 }
 
 func (self *Status_t) Report(out io.Writer) {
-	if self.Metrics == nil {
-		fmt.Fprintf(out, "NO REPORT\n")
-		return
-	}
-	res := self.Metrics.Get()
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	res := self.metrics.Get()
 	if len(res) == 0 {
 		fmt.Fprintf(out, "NO METRICS\n")
 		return
 	}
 	sort.Slice(res, func(i int, j int) bool { return res[i].Head.Before(res[j].Head) })
-	fmt.Fprintf(out, "ERRORS: %v\n", self.Metrics.GetErrors())
-	fmt.Fprintf(out, "TOTAL : %v %v\n", time.Since(self.Begin), res[len(res)-1].Tail.Sub(res[0].Head))
+	fmt.Fprintf(out, "HOSTS : %v\n", self.hosts)
+	fmt.Fprintf(out, "ERRORS: %v\n", self.errors)
+	fmt.Fprintf(out, "TOTAL : %v %v\n", time.Since(self.begin), res[len(res)-1].Tail.Sub(res[0].Head))
 	for _, v := range res {
 		ReportMetric(out, v, res[0].Head)
 	}
@@ -186,7 +155,10 @@ func (self *Status_t) Report(out io.Writer) {
 // "host:port" of the target or proxy. GetConn is called even
 // if there's already an idle cached connection available.
 func (self *Status_t) GetConn(hostPort string) {
-	self.Metrics.Set("GetConn", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("GetConn", time.Now())
+	self.hosts = append(self.hosts, hostPort)
 }
 
 // GotConn is called after a successful connection is
@@ -194,7 +166,9 @@ func (self *Status_t) GetConn(hostPort string) {
 // connection; instead, use the error from
 // Transport.RoundTrip.
 func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
-	self.Metrics.Set("GotConn", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("GotConn", time.Now())
 }
 
 // PutIdleConn is called when the connection is returned to
@@ -206,22 +180,28 @@ func (self *Status_t) GotConn(in httptrace.GotConnInfo) {
 // call returns.
 // For HTTP/2, this hook is not currently used.
 func (self *Status_t) PutIdleConn(err error) {
-	// self.Metrics.Set("PutIdleConn", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	// self.metrics.Set("PutIdleConn", time.Now())
 	if err != nil {
-		self.Metrics.SetError("PutIdleConn", err)
+		self.errors = append(self.errors, err)
 	}
 }
 
 // GotFirstResponseByte is called when the first byte of the response
 // headers is available.
 func (self *Status_t) GotFirstResponseByte() {
-	self.Metrics.Set("ResponseByte", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("ResponseByte", time.Now())
 }
 
 // Got100Continue is called if the server replies with a "100
 // Continue" response.
 func (self *Status_t) Got100Continue() {
-	self.Metrics.Set("100Continue", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("100Continue", time.Now())
 }
 
 // Got1xxResponse is called for each 1xx informational response header
@@ -229,20 +209,26 @@ func (self *Status_t) Got100Continue() {
 // for "100 Continue" responses, even if Got100Continue is also defined.
 // If it returns an error, the client request is aborted with that error value.
 func (self *Status_t) Got1xxResponse(code int, header textproto.MIMEHeader) (err error) {
-	self.Metrics.Set("1xxResponse", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("1xxResponse", time.Now())
 	return
 }
 
 // DNSStart is called when a DNS lookup begins.
 func (self *Status_t) DNSStart(in httptrace.DNSStartInfo) {
-	self.Metrics.Set("DNSStart", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("DNSStart", time.Now())
 }
 
 // DNSDone is called when a DNS lookup ends.
 func (self *Status_t) DNSDone(in httptrace.DNSDoneInfo) {
-	self.Metrics.Set("DNSDone", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("DNSDone", time.Now())
 	if in.Err != nil {
-		self.Metrics.SetError("DNSDone", in.Err)
+		self.errors = append(self.errors, in.Err)
 	}
 }
 
@@ -250,7 +236,9 @@ func (self *Status_t) DNSDone(in httptrace.DNSDoneInfo) {
 // If net.Dialer.DualStack (IPv6 "Happy Eyeballs") support is
 // enabled, this may be called multiple times.
 func (self *Status_t) ConnectStart(network, addr string) {
-	self.Metrics.Set("ConnectStart", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("ConnectStart", time.Now())
 }
 
 // ConnectDone is called when a new connection's Dial
@@ -259,9 +247,11 @@ func (self *Status_t) ConnectStart(network, addr string) {
 // If net.Dialer.DualStack ("Happy Eyeballs") support is
 // enabled, this may be called multiple times.
 func (self *Status_t) ConnectDone(network, addr string, err error) {
-	self.Metrics.Set("ConnectDone", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("ConnectDone", time.Now())
 	if err != nil {
-		self.Metrics.SetError("ConnectDone", err)
+		self.errors = append(self.errors, err)
 	}
 }
 
@@ -269,16 +259,20 @@ func (self *Status_t) ConnectDone(network, addr string, err error) {
 // connecting to an HTTPS site via an HTTP proxy, the handshake happens
 // after the CONNECT request is processed by the proxy.
 func (self *Status_t) TLSHandshakeStart() {
-	self.Metrics.Set("TLSStart", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("TLSStart", time.Now())
 }
 
 // TLSHandshakeDone is called after the TLS handshake with either the
 // successful handshake's connection state, or a non-nil error on handshake
 // failure.
 func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
-	self.Metrics.Set("TLSDone", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("TLSDone", time.Now())
 	if err != nil {
-		self.Metrics.SetError("TLSDone", err)
+		self.errors = append(self.errors, err)
 	}
 }
 
@@ -286,13 +280,17 @@ func (self *Status_t) TLSHandshakeDone(in tls.ConnectionState, err error) {
 // each request header. At the time of this call the values
 // might be buffered and not yet written to the network.
 func (self *Status_t) WroteHeaderField(key string, value []string) {
-	self.Metrics.Set("WroteHeaderField", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("WroteHeaderField", time.Now())
 }
 
 // WroteHeaders is called after the Transport has written
 // all request headers.
 func (self *Status_t) WroteHeaders() {
-	self.Metrics.Set("WroteHeaders", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("WroteHeaders", time.Now())
 }
 
 // Wait100Continue is called if the Request specified
@@ -300,15 +298,19 @@ func (self *Status_t) WroteHeaders() {
 // request headers but is waiting for "100 Continue" from the
 // server before writing the request body.
 func (self *Status_t) Wait100Continue() {
-	self.Metrics.Set("Wait100Continue", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("Wait100Continue", time.Now())
 }
 
 // WroteRequest is called with the result of writing the
 // request and any body. It may be called multiple times
 // in the case of retried requests.
 func (self *Status_t) WroteRequest(in httptrace.WroteRequestInfo) {
-	self.Metrics.Set("WroteRequest", time.Now())
+	self.mx.Lock()
+	defer self.mx.Unlock()
+	self.metrics.Set("WroteRequest", time.Now())
 	if in.Err != nil {
-		self.Metrics.SetError("WroteRequest", in.Err)
+		self.errors = append(self.errors, in.Err)
 	}
 }

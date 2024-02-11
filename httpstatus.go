@@ -95,6 +95,8 @@ func (self *Trace_t) SetError(name string, in error) {
 }
 
 func (self *Trace_t) Report(out io.Writer) {
+	self.mx.Lock()
+	defer self.mx.Unlock()
 	for k, v := range self.hosts {
 		fmt.Fprintf(out, "HOSTS : %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
 	}
@@ -103,9 +105,7 @@ func (self *Trace_t) Report(out io.Writer) {
 	}
 	var times []*Count_t[time.Time]
 	for _, v := range self.times {
-		if v.Count > 0 {
-			times = append(times, v)
-		}
+		times = append(times, v)
 	}
 	sort.Slice(times, func(i int, j int) bool { return times[i].Head.Before(times[j].Head) })
 	fmt.Fprintf(out, "TOTAL : %v %v\n", time.Since(self.begin), times[len(times)-1].Tail.Sub(times[0].Head))

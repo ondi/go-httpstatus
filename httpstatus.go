@@ -97,6 +97,7 @@ func (self *Trace_t) SetError(name string, in error) {
 func (self *Trace_t) Report(out io.Writer) {
 	self.mx.Lock()
 	defer self.mx.Unlock()
+	fmt.Fprintf(out, "TRACE : times=%v, hosts=%v, errors=%v\n", len(self.times), len(self.hosts), len(self.errors))
 	for k, v := range self.hosts {
 		fmt.Fprintf(out, "HOSTS : %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
 	}

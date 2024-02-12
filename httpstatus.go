@@ -99,10 +99,21 @@ func (self *Trace_t) Report(out io.Writer) {
 	defer self.mx.Unlock()
 	fmt.Fprintf(out, "TRACE : times=%v, hosts=%v, errors=%v\n", len(self.times), len(self.hosts), len(self.errors))
 	for k, v := range self.hosts {
-		fmt.Fprintf(out, "HOSTS : %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
+		if v.Count == 1 {
+			fmt.Fprintf(out, "HOSTS : %v: %v, %v\n", k, v.Count, v.Tail)
+		} else {
+			fmt.Fprintf(out, "HOSTS : %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
+		}
 	}
 	for k, v := range self.errors {
-		fmt.Fprintf(out, "ERRORS : %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
+		if v.Count == 1 {
+			fmt.Fprintf(out, "ERRORS: %v: %v, %v\n", k, v.Count, v.Tail)
+		} else {
+			fmt.Fprintf(out, "ERRORS: %v: %v, %v, %v\n", k, v.Count, v.Head, v.Tail)
+		}
+	}
+	if len(self.times) == 0 {
+		return
 	}
 	var times []*Count_t[time.Time]
 	for _, v := range self.times {
@@ -117,7 +128,11 @@ func (self *Trace_t) Report(out io.Writer) {
 }
 
 func ReportMetric(out io.Writer, c *Count_t[time.Time], prev time.Time) time.Time {
-	fmt.Fprintf(out, "%-16s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
+	if c.Count == 1 {
+		fmt.Fprintf(out, "%-16s: %v %v %v\n", c.Name, c.Count, c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
+	} else {
+		fmt.Fprintf(out, "%-16s: %v %v %v %v\n", c.Name, c.Count, c.Head.Format("15:04:05.000"), c.Tail.Format("15:04:05.000"), c.Tail.Sub(prev))
+	}
 	return c.Tail
 }
 

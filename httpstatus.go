@@ -20,7 +20,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"net/http"
 	"net/http/httptrace"
 	"net/textproto"
 	"sort"
@@ -142,18 +141,8 @@ type Status_t struct {
 	StatusCode int
 }
 
-func (self *Status_t) WriteResp(resp *http.Response) {
-	self.StatusCode = resp.StatusCode
-	self.Body.ReadFrom(resp.Body)
-}
-
-func (self *Status_t) WriteRespLimit(resp *http.Response, limit int64) {
-	self.StatusCode = resp.StatusCode
-	self.Body.ReadFrom(io.LimitReader(resp.Body, limit))
-}
-
 func (self *Status_t) StatusOk() bool {
-	if self.StatusCode >= 200 && self.StatusCode < 300 {
+	if self.StatusCode >= 200 && self.StatusCode <= 299 {
 		return true
 	}
 	return false

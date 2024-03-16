@@ -137,11 +137,9 @@ func ReportMetric(out io.Writer, c *Count_t[time.Time], prev time.Time) time.Tim
 }
 
 type Status_t struct {
-	trace *Trace_t
-
+	trace      *Trace_t
 	Body       bytes.Buffer
 	StatusCode int
-	StatusOk   bool
 }
 
 func (self *Status_t) WriteResp(resp *http.Response) {
@@ -154,9 +152,11 @@ func (self *Status_t) WriteRespLimit(resp *http.Response, limit int64) {
 	self.Body.ReadFrom(io.LimitReader(resp.Body, limit))
 }
 
-func (self *Status_t) WriteStatus(StatusCode int, in string) {
-	self.StatusCode = StatusCode
-	self.Body.WriteString(in)
+func (self *Status_t) StatusOk() bool {
+	if self.StatusCode >= 200 && self.StatusCode < 300 {
+		return true
+	}
+	return false
 }
 
 func (self *Status_t) String() (res string) {

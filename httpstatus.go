@@ -139,32 +139,28 @@ func ReportMetric(out io.Writer, c *Count_t[time.Time], prev time.Time) time.Tim
 type Status_t struct {
 	trace *Trace_t
 
-	Body   bytes.Buffer
-	Status int
-}
-
-func (self *Status_t) WriteReq(req *http.Request) {
-	self.Body.WriteString(req.URL.String())
-	self.Body.WriteString(" ")
+	Body       bytes.Buffer
+	StatusCode int
+	StatusOk   bool
 }
 
 func (self *Status_t) WriteResp(resp *http.Response) {
-	self.Status = resp.StatusCode
+	self.StatusCode = resp.StatusCode
 	self.Body.ReadFrom(resp.Body)
 }
 
 func (self *Status_t) WriteRespLimit(resp *http.Response, limit int64) {
-	self.Status = resp.StatusCode
+	self.StatusCode = resp.StatusCode
 	self.Body.ReadFrom(io.LimitReader(resp.Body, limit))
 }
 
-func (self *Status_t) WriteStatus(status int, in string) {
-	self.Status = status
+func (self *Status_t) WriteStatus(StatusCode int, in string) {
+	self.StatusCode = StatusCode
 	self.Body.WriteString(in)
 }
 
 func (self *Status_t) String() (res string) {
-	res = strconv.FormatInt(int64(self.Status), 10)
+	res = strconv.FormatInt(int64(self.StatusCode), 10)
 	if self.Body.Len() > 0 {
 		res += " " + self.Body.String()
 	}

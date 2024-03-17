@@ -139,13 +139,7 @@ type Status_t struct {
 	trace      *Trace_t
 	Body       bytes.Buffer
 	StatusCode int
-}
-
-func (self *Status_t) StatusOk() bool {
-	if self.StatusCode >= 200 && self.StatusCode <= 299 {
-		return true
-	}
-	return false
+	StatusOk   bool
 }
 
 func (self *Status_t) String() (res string) {

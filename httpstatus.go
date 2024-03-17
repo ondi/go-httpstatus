@@ -139,7 +139,7 @@ type Status_t struct {
 	trace      *Trace_t
 	Body       bytes.Buffer
 	StatusCode int
-	StatusOk   bool
+	StatusFail bool
 }
 
 func (self *Status_t) String() (res string) {

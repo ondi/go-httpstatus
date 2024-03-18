@@ -39,6 +39,14 @@ var STATUS_OK_NO_CONTENT = map[int]bool{
 	http.StatusNoContent: true,
 }
 
+func StatusOkContent(StatusCode int) bool {
+	return STATUS_OK_CONTENT[StatusCode]
+}
+
+func StatusOkNoContent(StatusCode int) bool {
+	return STATUS_OK_NO_CONTENT[StatusCode]
+}
+
 type Count_t[T any] struct {
 	Head  T
 	Tail  T
@@ -152,16 +160,8 @@ type Status_t struct {
 	StatusCode int
 }
 
-func (self *Status_t) StatusOkContent() bool {
-	return STATUS_OK_CONTENT[self.StatusCode]
-}
-
-func (self *Status_t) StatusOkNoContent() bool {
-	return STATUS_OK_NO_CONTENT[self.StatusCode]
-}
-
 func (self *Status_t) StatusOk() (ok bool) {
-	return self.StatusOkContent() || self.StatusOkNoContent()
+	return StatusOkContent(self.StatusCode) || StatusOkNoContent(self.StatusCode)
 }
 
 func (self *Status_t) String() (res string) {

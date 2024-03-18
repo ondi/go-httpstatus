@@ -49,6 +49,10 @@ func NoContent(StatusCode int) bool {
 	return NO_CONTENT[StatusCode]
 }
 
+func StatusOk(StatusCode int) bool {
+	return Content(StatusCode) || NoContent(StatusCode)
+}
+
 type Count_t[T any] struct {
 	Head  T
 	Tail  T
@@ -160,10 +164,6 @@ type Status_t struct {
 	trace      *Trace_t
 	Body       bytes.Buffer
 	StatusCode int
-}
-
-func (self *Status_t) StatusOk() (ok bool) {
-	return Content(self.StatusCode) || NoContent(self.StatusCode)
 }
 
 func (self *Status_t) String() (res string) {

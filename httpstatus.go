@@ -29,22 +29,24 @@ import (
 	"time"
 )
 
-var STATUS_OK_CONTENT = map[int]bool{
+var CONTENT = map[int]bool{
 	http.StatusOK:       true,
 	http.StatusCreated:  true,
 	http.StatusAccepted: true,
 }
 
-var STATUS_OK_NO_CONTENT = map[int]bool{
+var NO_CONTENT = map[int]bool{
 	http.StatusNoContent: true,
 }
 
-func StatusOkContent(StatusCode int) bool {
-	return STATUS_OK_CONTENT[StatusCode]
+// Status OK, content may be decoded
+func Content(StatusCode int) bool {
+	return CONTENT[StatusCode]
 }
 
-func StatusOkNoContent(StatusCode int) bool {
-	return STATUS_OK_NO_CONTENT[StatusCode]
+// Status OK, content should not be decoded
+func NoContent(StatusCode int) bool {
+	return NO_CONTENT[StatusCode]
 }
 
 type Count_t[T any] struct {
@@ -161,7 +163,7 @@ type Status_t struct {
 }
 
 func (self *Status_t) StatusOk() (ok bool) {
-	return StatusOkContent(self.StatusCode) || StatusOkNoContent(self.StatusCode)
+	return Content(self.StatusCode) || NoContent(self.StatusCode)
 }
 
 func (self *Status_t) String() (res string) {

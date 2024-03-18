@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net/http"
 	"net/http/httptrace"
 	"net/textproto"
 	"sort"
@@ -27,6 +28,13 @@ import (
 	"sync"
 	"time"
 )
+
+var STATUS_OK = map[int]struct{}{
+	http.StatusOK:        {},
+	http.StatusCreated:   {},
+	http.StatusAccepted:  {},
+	http.StatusNoContent: {},
+}
 
 type Count_t[T any] struct {
 	Head  T
@@ -139,7 +147,11 @@ type Status_t struct {
 	trace      *Trace_t
 	Body       bytes.Buffer
 	StatusCode int
-	StatusOk   bool
+}
+
+func (self *Status_t) StatusOk() (ok bool) {
+	_, ok = STATUS_OK[self.StatusCode]
+	return
 }
 
 func (self *Status_t) String() (res string) {

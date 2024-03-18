@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-var STATUS_OK = map[int]bool{
+var STATUS_OK_CONTENT = map[int]bool{
 	http.StatusOK:       true,
 	http.StatusCreated:  true,
 	http.StatusAccepted: true,
@@ -152,8 +152,16 @@ type Status_t struct {
 	StatusCode int
 }
 
+func (self *Status_t) StatusOkContent() bool {
+	return STATUS_OK_CONTENT[self.StatusCode]
+}
+
+func (self *Status_t) StatusOkNoContent() bool {
+	return STATUS_OK_NO_CONTENT[self.StatusCode]
+}
+
 func (self *Status_t) StatusOk() (ok bool) {
-	return STATUS_OK[self.StatusCode] || STATUS_OK_NO_CONTENT[self.StatusCode]
+	return self.StatusOkContent() || self.StatusOkNoContent()
 }
 
 func (self *Status_t) String() (res string) {

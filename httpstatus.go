@@ -29,11 +29,14 @@ import (
 	"time"
 )
 
-var STATUS_OK = map[int]struct{}{
-	http.StatusOK:        {},
-	http.StatusCreated:   {},
-	http.StatusAccepted:  {},
-	http.StatusNoContent: {},
+var STATUS_OK = map[int]bool{
+	http.StatusOK:       true,
+	http.StatusCreated:  true,
+	http.StatusAccepted: true,
+}
+
+var STATUS_OK_NO_CONTENT = map[int]bool{
+	http.StatusNoContent: true,
 }
 
 type Count_t[T any] struct {
@@ -150,8 +153,7 @@ type Status_t struct {
 }
 
 func (self *Status_t) StatusOk() (ok bool) {
-	_, ok = STATUS_OK[self.StatusCode]
-	return
+	return STATUS_OK[self.StatusCode] || STATUS_OK_NO_CONTENT[self.StatusCode]
 }
 
 func (self *Status_t) String() (res string) {

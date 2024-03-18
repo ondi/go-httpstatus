@@ -40,17 +40,17 @@ var NO_CONTENT = map[int]bool{
 }
 
 // Status OK, content may be decoded
-func Content(StatusCode int) bool {
+func WithContent(StatusCode int) bool {
 	return CONTENT[StatusCode]
 }
 
 // Status OK, content should not be decoded
-func NoContent(StatusCode int) bool {
+func WithNoContent(StatusCode int) bool {
 	return NO_CONTENT[StatusCode]
 }
 
 func StatusOk(StatusCode int) bool {
-	return Content(StatusCode) || NoContent(StatusCode)
+	return WithContent(StatusCode) || WithNoContent(StatusCode)
 }
 
 type Count_t[T any] struct {

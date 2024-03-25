@@ -40,10 +40,22 @@ func (self *Config_t) Header(in http.Header) {
 	}
 }
 
-func CopyHeaderName(name string, to http.Header, from ...http.Header) {
+func NoHeader(http.Header) {}
+
+func CopyHeader(to http.Header, from ...http.Header) {
 	for _, v1 := range from {
-		for _, v2 := range v1.Values(name) {
-			to.Add(name, v2)
+		for k2, v2 := range v1 {
+			for _, v3 := range v2 {
+				to.Add(k2, v3)
+			}
+		}
+	}
+}
+
+func CopyHeaderKey(key string, to http.Header, from ...http.Header) {
+	for _, v1 := range from {
+		for _, v2 := range v1.Values(key) {
+			to.Add(key, v2)
 		}
 	}
 }
@@ -133,6 +145,7 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		status.URL.WriteString(req.URL.String())
 		status.Report(&status.Body)
 		return
 	}
@@ -157,9 +170,9 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 }
 
 // some http servers refuse multiple headers with same name
-func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
+func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header func(http.Header)) (status Status_t, err error) {
 	for _, v := range cfg.Urls() {
-		status, err = HttpDo(context, client, method, v+path, in, decode, append([]func(http.Header){cfg.Header}, header...)...)
+		status, err = HttpDo(context, client, method, v+path, in, decode, cfg.Header, header)
 		if err == nil {
 			break
 		}

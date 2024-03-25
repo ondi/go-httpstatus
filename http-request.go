@@ -116,7 +116,7 @@ func Copy(w http.ResponseWriter) func(resp *http.Response) (err error) {
 	}
 }
 
-func HttpDo(context Contexter, client Client, method string, URL string, in []byte, decode func(resp *http.Response) error, header func(http.Header)) (status Status_t, err error) {
+func HttpDo(context Contexter, client Client, method string, URL string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
 	ctx, cancel := context.Get()
 	defer cancel()
 	req, err := http.NewRequestWithContext(
@@ -128,7 +128,9 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 	if err != nil {
 		return
 	}
-	header(req.Header)
+	for _, v := range header {
+		v(req.Header)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		status.Report(&status.Body)
@@ -155,14 +157,9 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 }
 
 // some http servers refuse multiple headers with same name
-func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header func(http.Header)) (status Status_t, err error) {
+func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
 	for _, v := range cfg.Urls() {
-		status, err = HttpDo(context, client, method, v+path, in, decode,
-			func(in http.Header) {
-				cfg.Header(in)
-				header(in)
-			},
-		)
+		status, err = HttpDo(context, client, method, v+path, in, decode, append([]func(http.Header){cfg.Header}, header...)...)
 		if err == nil {
 			break
 		}

@@ -128,13 +128,13 @@ func Copy(w http.ResponseWriter) func(resp *http.Response) (err error) {
 	}
 }
 
-func HttpDo(context Contexter, client Client, method string, URL string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
+func HttpDo(context Contexter, client Client, method string, path string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
 	ctx, cancel := context.Get()
 	defer cancel()
 	req, err := http.NewRequestWithContext(
 		status.WithClientTrace(ctx),
 		method,
-		URL,
+		path,
 		bytes.NewReader(in),
 	)
 	if err != nil {

@@ -14,17 +14,17 @@ import (
 	"time"
 )
 
-type Http_t struct {
+type Config_t struct {
 	In      []string    `yaml:"Urls"`
 	Headers http.Header `yaml:"Headers"`
 	Body    string      `yaml:"Body"`
 }
 
-func (self *Http_t) Len() int {
+func (self *Config_t) Len() int {
 	return len(self.In)
 }
 
-func (self *Http_t) Urls() (res []string) {
+func (self *Config_t) Urls() (res []string) {
 	res = make([]string, len(self.In))
 	for i, v := range rand.Perm(len(self.In)) {
 		res[i] = self.In[v]
@@ -32,10 +32,18 @@ func (self *Http_t) Urls() (res []string) {
 	return
 }
 
-func (self *Http_t) Header(in http.Header) {
+func (self *Config_t) Header(in http.Header) {
 	for k1, v1 := range self.Headers {
 		for _, v2 := range v1 {
 			in.Add(k1, v2)
+		}
+	}
+}
+
+func CopyHeaderName(name string, to http.Header, from ...http.Header) {
+	for _, v1 := range from {
+		for _, v2 := range v1.Values(name) {
+			to.Add(name, v2)
 		}
 	}
 }
@@ -108,7 +116,7 @@ func Copy(w http.ResponseWriter) func(resp *http.Response) (err error) {
 	}
 }
 
-func HttpDo(context Contexter, client Client, method string, URL string, in []byte, decode func(resp *http.Response) error, headers ...func(http.Header)) (status Status_t, err error) {
+func HttpDo(context Contexter, client Client, method string, URL string, in []byte, decode func(resp *http.Response) error, header func(http.Header)) (status Status_t, err error) {
 	ctx, cancel := context.Get()
 	defer cancel()
 	req, err := http.NewRequestWithContext(
@@ -120,9 +128,7 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 	if err != nil {
 		return
 	}
-	for _, v := range headers {
-		v(req.Header)
-	}
+	header(req.Header)
 	resp, err := client.Do(req)
 	if err != nil {
 		status.Report(&status.Body)
@@ -135,14 +141,12 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 
 	if err != nil {
 		status.StatusCode = -status.StatusCode
-		status.Body.WriteString(req.URL.String())
-		status.Body.WriteString(" ")
+		status.URL.WriteString(req.URL.String())
 		status.Body.WriteString(err.Error())
 		return status, nil
 	}
 	if Ok(resp.StatusCode) == false {
-		status.Body.WriteString(req.URL.String())
-		status.Body.WriteString(" ")
+		status.URL.WriteString(req.URL.String())
 		status.Body.ReadFrom(resp.Body)
 		return
 	}
@@ -151,9 +155,14 @@ func HttpDo(context Contexter, client Client, method string, URL string, in []by
 }
 
 // some http servers refuse multiple headers with same name
-func HttpRequest(context Contexter, client Client, method string, cfg Http_t, path string, in []byte, decode func(resp *http.Response) error, headers ...func(http.Header)) (status Status_t, err error) {
+func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header func(http.Header)) (status Status_t, err error) {
 	for _, v := range cfg.Urls() {
-		status, err = HttpDo(context, client, method, v+path, in, decode, append([]func(http.Header){cfg.Header}, headers...)...)
+		status, err = HttpDo(context, client, method, v+path, in, decode,
+			func(in http.Header) {
+				cfg.Header(in)
+				header(in)
+			},
+		)
 		if err == nil {
 			break
 		}

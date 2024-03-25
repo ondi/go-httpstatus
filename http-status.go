@@ -160,12 +160,16 @@ func ReportMetric(out io.Writer, c *Count_t[time.Time], prev time.Time) time.Tim
 
 type Status_t struct {
 	trace      *Trace_t
+	URL        bytes.Buffer
 	Body       bytes.Buffer
 	StatusCode int
 }
 
 func (self *Status_t) String() (res string) {
 	res = strconv.FormatInt(int64(self.StatusCode), 10)
+	if self.URL.Len() > 0 {
+		res += " " + self.URL.String()
+	}
 	if self.Body.Len() > 0 {
 		res += " " + self.Body.String()
 	}

@@ -165,7 +165,7 @@ type Status_t struct {
 	StatusCode int
 }
 
-func (self *Status_t) String() (res string) {
+func (self *Status_t) StringLite() (res string) {
 	res = strconv.FormatInt(int64(self.StatusCode), 10)
 	if self.Body.Len() > 0 {
 		res += " " + self.Body.String()
@@ -173,7 +173,7 @@ func (self *Status_t) String() (res string) {
 	return
 }
 
-func (self *Status_t) StringAll() (res string) {
+func (self *Status_t) String() (res string) {
 	res = strconv.FormatInt(int64(self.StatusCode), 10)
 	if self.URL.Len() > 0 {
 		res += " " + self.URL.String()

@@ -8,10 +8,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/ondi/go-log"
 )
 
 type Config_t struct {
@@ -128,8 +131,8 @@ func Copy(w http.ResponseWriter) func(resp *http.Response) (err error) {
 	}
 }
 
-func HttpDo(context Contexter, client Client, method string, path string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
-	ctx, cancel := context.Get()
+func HttpDo(contexter Contexter, client Client, method string, path string, in []byte, decode func(resp *http.Response) error, header ...func(http.Header)) (status Status_t, err error) {
+	ctx, cancel := contexter.Get()
 	defer cancel()
 	req, err := http.NewRequestWithContext(
 		status.WithClientTrace(ctx),
@@ -146,7 +149,10 @@ func HttpDo(context Contexter, client Client, method string, path string, in []b
 	resp, err := client.Do(req)
 	if err != nil {
 		status.URL.WriteString(req.URL.String())
-		status.Report(&status.Body)
+		if errors.Is(err, context.Canceled) == false {
+			status.Report(&status.Body)
+			log.WarnCtx(ctx, "HTTP_REQUEST: false %v %s", err, status.Body.Bytes())
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -158,13 +164,17 @@ func HttpDo(context Contexter, client Client, method string, path string, in []b
 		status.StatusCode = -status.StatusCode
 		status.URL.WriteString(req.URL.String())
 		status.Body.WriteString(err.Error())
+		log.WarnCtx(ctx, "HTTP_REQUEST: false %v %v", method, status.String())
 		return status, nil
 	}
 	if Ok(resp.StatusCode) == false {
 		status.URL.WriteString(req.URL.String())
 		status.Body.ReadFrom(resp.Body)
+		log.WarnCtx(ctx, "HTTP_REQUEST: false %v %v", method, status.String())
 		return
 	}
+
+	log.DebugCtx(ctx, "HTTP_REQUEST: %v %v %v %v %v", Ok(status.StatusCode), err, method, status.StatusCode, req.URL)
 
 	return
 }

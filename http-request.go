@@ -152,7 +152,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 		v(req)
 	}
 
-	// remove later
+	// some http servers refuse multi-headers
 	for k, v := range req.Header {
 		if len(v) > 1 {
 			log.WarnCtx(ctx, "HTTP_REQUEST: HEADER LENGTH %v=%v, url=%v", k, len(v), req.URL.String())
@@ -190,7 +190,6 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	return
 }
 
-// some http servers refuse multiple headers with same name
 func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header func(*http.Request)) (status Status_t, err error) {
 	for _, v := range cfg.Urls() {
 		status, err = HttpDo(context, client, method, v+path, in, decode, cfg.Header, header)

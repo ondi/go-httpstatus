@@ -20,15 +20,19 @@ import (
 
 var LOG_HEADERS = func(r *http.Request) string {
 	var count int
+	var temp string
 	var sb strings.Builder
 	sb.WriteString("{")
 	for _, v := range []string{} {
+		if temp = r.Header.Get(v); len(temp) == 0 {
+			continue
+		}
 		if count > 0 {
 			sb.WriteString(",")
 		}
 		sb.WriteString(v)
 		sb.WriteString("=")
-		sb.WriteString(r.Header.Get(v))
+		sb.WriteString(temp)
 		count++
 	}
 	sb.WriteString("}")

@@ -169,9 +169,9 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	}
 	defer resp.Body.Close()
 
-	status.URL.WriteString(req.URL.String())
-	status.StatusCode = resp.StatusCode
 	err = decode(resp)
+	status.StatusCode = resp.StatusCode
+	status.URL.WriteString(req.URL.String())
 
 	if err != nil {
 		status.StatusCode = -status.StatusCode

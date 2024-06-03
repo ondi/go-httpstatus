@@ -167,7 +167,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	if err != nil {
 		if errors.Is(err, context.Canceled) == false {
 			status.Report(&status.Body)
-			log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%s, headers=%v, url=%v, err=%v", method, status.String(), LOG_HEADERS(req), req.URL.String(), err)
+			log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%s, headers=%v, url=%v, err=%v", method, status.StringFull(), LOG_HEADERS(req), req.URL.String(), err)
 		}
 		return
 	}
@@ -180,16 +180,16 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	if err != nil {
 		status.StatusCode = -status.StatusCode
 		status.Body.WriteString(err.Error())
-		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.String(), LOG_HEADERS(req))
+		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
 		return status, nil
 	}
 	if Ok(resp.StatusCode) == false {
 		status.Body.ReadFrom(resp.Body)
-		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.String(), LOG_HEADERS(req))
+		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
 		return
 	}
 
-	log.DebugCtx(ctx, "HTTP_REQUEST: %v method=%v, status=%v, headers=%v, err=%v", Ok(status.StatusCode), method, status.String(), LOG_HEADERS(req), err)
+	log.DebugCtx(ctx, "HTTP_REQUEST: %v method=%v, status=%v, headers=%v, err=%v", Ok(status.StatusCode), method, status.StringFull(), LOG_HEADERS(req), err)
 
 	return
 }

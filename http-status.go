@@ -173,7 +173,7 @@ func (self *Status_t) StringLite() (res string) {
 	return
 }
 
-func (self *Status_t) String() (res string) {
+func (self *Status_t) StringFull() (res string) {
 	res = strconv.FormatInt(int64(self.StatusCode), 10)
 	if self.URL.Len() > 0 {
 		res += " " + self.URL.String()

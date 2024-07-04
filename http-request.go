@@ -199,7 +199,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 		return
 	}
 
-	log.DebugCtx(ctx, "HTTP_REQUEST: %v method=%v, status=%v, headers=%v, err=%v", Ok(status.StatusCode), method, status.StringFull(), LOG_HEADERS(req), err)
+	LOG_DEBUG(ctx, "HTTP_REQUEST: %v method=%v, status=%v, headers=%v, err=%v", Ok(status.StatusCode), method, status.StringFull(), LOG_HEADERS(req), err)
 
 	return
 }

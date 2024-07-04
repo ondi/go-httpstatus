@@ -160,16 +160,10 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 		return
 	}
 
+	// some http servers refuse multi-headers
 	for _, v := range header {
 		if err = v(req); err != nil {
 			return
-		}
-	}
-
-	// some http servers refuse multi-headers
-	for k, v := range req.Header {
-		if len(v) > 1 {
-			LOG_WARN(ctx, "HTTP_REQUEST: HEADER LENGTH %v=%v, url=%v", k, len(v), req.URL.String())
 		}
 	}
 

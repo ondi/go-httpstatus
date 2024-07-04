@@ -18,7 +18,10 @@ import (
 	"github.com/ondi/go-log"
 )
 
-var LOG_WARN = log.WarnCtx
+var (
+	LOG_WARN  = log.WarnCtx
+	LOG_DEBUG = log.DebugCtx
+)
 
 var LOG_HEADERS = func(r *http.Request) string {
 	var count int

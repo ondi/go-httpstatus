@@ -18,6 +18,8 @@ import (
 	"github.com/ondi/go-log"
 )
 
+var LOG_WARN = log.WarnCtx
+
 var LOG_HEADERS = func(r *http.Request) string {
 	var count int
 	var temp string
@@ -164,7 +166,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	// some http servers refuse multi-headers
 	for k, v := range req.Header {
 		if len(v) > 1 {
-			log.WarnCtx(ctx, "HTTP_REQUEST: HEADER LENGTH %v=%v, url=%v", k, len(v), req.URL.String())
+			LOG_WARN(ctx, "HTTP_REQUEST: HEADER LENGTH %v=%v, url=%v", k, len(v), req.URL.String())
 		}
 	}
 
@@ -172,7 +174,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	if err != nil {
 		if errors.Is(err, context.Canceled) == false {
 			status.Report(&status.Body)
-			log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%s, headers=%v, url=%v, err=%v", method, status.StringFull(), LOG_HEADERS(req), req.URL.String(), err)
+			LOG_WARN(ctx, "HTTP_REQUEST: false method=%v, status=%s, headers=%v, url=%v, err=%v", method, status.StringFull(), LOG_HEADERS(req), req.URL.String(), err)
 		}
 		return
 	}
@@ -185,12 +187,12 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	if err != nil {
 		status.StatusCode = -status.StatusCode
 		status.Body.WriteString(err.Error())
-		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
+		LOG_WARN(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
 		return status, nil
 	}
 	if Ok(resp.StatusCode) == false {
 		status.Body.ReadFrom(resp.Body)
-		log.WarnCtx(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
+		LOG_WARN(ctx, "HTTP_REQUEST: false method=%v, status=%v, headers=%v", method, status.StringFull(), LOG_HEADERS(req))
 		return
 	}
 

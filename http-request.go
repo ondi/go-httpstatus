@@ -58,7 +58,7 @@ func (self *Config_t) Urls() (res []string) {
 	return
 }
 
-func (self *Config_t) Header(req *http.Request) {
+func (self *Config_t) Header(req *http.Request) (err error) {
 	if len(self.Host) > 0 {
 		req.Host = self.Host
 	}
@@ -67,9 +67,12 @@ func (self *Config_t) Header(req *http.Request) {
 			req.Header.Add(k1, v2)
 		}
 	}
+	return
 }
 
-func NoHeader(*http.Request) {}
+func NoHeader(*http.Request) error {
+	return nil
+}
 
 type Client interface {
 	Do(*http.Request) (*http.Response, error)
@@ -139,7 +142,7 @@ func Copy(w http.ResponseWriter) func(resp *http.Response) (err error) {
 	}
 }
 
-func HttpDo(contexter Contexter, client Client, method string, path string, in []byte, decode func(resp *http.Response) error, header ...func(*http.Request)) (status Status_t, err error) {
+func HttpDo(contexter Contexter, client Client, method string, path string, in []byte, decode func(*http.Response) error, header ...func(*http.Request) error) (status Status_t, err error) {
 	ctx, cancel := contexter.Get()
 	defer cancel()
 	req, err := http.NewRequestWithContext(
@@ -153,7 +156,9 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	}
 
 	for _, v := range header {
-		v(req)
+		if err = v(req); err != nil {
+			return
+		}
 	}
 
 	// some http servers refuse multi-headers
@@ -194,7 +199,7 @@ func HttpDo(contexter Contexter, client Client, method string, path string, in [
 	return
 }
 
-func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(resp *http.Response) error, header func(*http.Request)) (status Status_t, err error) {
+func HttpRequest(context Contexter, client Client, method string, cfg Config_t, path string, in []byte, decode func(*http.Response) error, header func(*http.Request) error) (status Status_t, err error) {
 	for _, v := range cfg.Urls() {
 		status, err = HttpDo(context, client, method, v+path, in, decode, cfg.Header, header)
 		if err == nil {

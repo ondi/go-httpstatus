@@ -19,11 +19,12 @@ import (
 )
 
 var (
-	LOG_WARN  = log.WarnCtx
-	LOG_DEBUG = log.DebugCtx
+	LOG_WARN    func(ctx context.Context, format string, args ...any) = log.WarnCtx
+	LOG_DEBUG   func(ctx context.Context, format string, args ...any) = log.DebugCtx
+	LOG_HEADERS func(r *http.Request) string                          = LogHeaders
 )
 
-var LOG_HEADERS = func(r *http.Request) string {
+func LogHeaders(r *http.Request) string {
 	var count int
 	var temp string
 	var sb strings.Builder

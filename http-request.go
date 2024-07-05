@@ -21,15 +21,26 @@ import (
 var (
 	LOG_WARN    func(ctx context.Context, format string, args ...any) = log.WarnCtx
 	LOG_DEBUG   func(ctx context.Context, format string, args ...any) = log.DebugCtx
-	LOG_HEADERS func(r *http.Request) string                          = LogHeaders
+	LOG_HEADERS func(r *http.Request) string                          = NewLogHeaders(nil).Log
 )
 
-func LogHeaders(r *http.Request) string {
+type LogHeaders_t struct {
+	headers []string
+}
+
+func NewLogHeaders(headers []string) (self *LogHeaders_t) {
+	self = &LogHeaders_t{
+		headers: headers,
+	}
+	return
+}
+
+func (self *LogHeaders_t) Log(r *http.Request) string {
 	var count int
 	var temp string
 	var sb strings.Builder
 	sb.WriteString("{")
-	for _, v := range []string{} {
+	for _, v := range self.headers {
 		if temp = r.Header.Get(v); len(temp) == 0 {
 			continue
 		}

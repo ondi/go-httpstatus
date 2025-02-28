@@ -1,13 +1,13 @@
-github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
-github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
+github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/ondi/go-cache v0.0.0-20230425151132-e34113a7989a h1:GiJ4x7qusRIfRmC52vcXE8GfNojglGDEHAox37hxchs=
 github.com/ondi/go-cache v0.0.0-20230425151132-e34113a7989a/go.mod h1:KHvTO08bISVccwhHh62tNAJHn/P9vS9RTDvW9CKX6hA=
 github.com/ondi/go-circular v0.0.0-20240806163217-2b2a2afb1db4 h1:7DhzuT8HF3+ci463Hc6E+m8wCLe+lT9poRYnbPCd/dU=
 github.com/ondi/go-circular v0.0.0-20240806163217-2b2a2afb1db4/go.mod h1:fOnGuMofxAkkckbqcFxParIJGGnqMoPrZTzD+fSPcfg=
-github.com/ondi/go-log v0.0.0-20241202151303-942fa2c2060d h1:nalZ7aSmUNikMb/bE2k7sE9CpDPqXP/8vnD5Czit3q4=
-github.com/ondi/go-log v0.0.0-20241202151303-942fa2c2060d/go.mod h1:L7oh8uPcfHOfWQQoaymdlod6jlGUnfc+hKe3fLoUzvY=
+github.com/ondi/go-log v0.0.0-20250110115257-b6b0eef249cb h1:k3veqtdgPTJUw8vkjXUhu212ZWBS3eQgASVp1vcom0w=
+github.com/ondi/go-log v0.0.0-20250110115257-b6b0eef249cb/go.mod h1:djEKAlKhyONWncPgrESjmO9CYnee+7gxi/aAxnaaa4c=
 github.com/ondi/go-queue v0.0.0-20241202144359-797dec4cff85 h1:p0f58vdXyOLNExg1SNUqq6eEHfRc7k7E4JEYG6j6oKU=
 github.com/ondi/go-queue v0.0.0-20241202144359-797dec4cff85/go.mod h1:x9fCVIrllGNPbHrwdMNLYQsoS9zHt/GFUJXNUN3eBzE=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
